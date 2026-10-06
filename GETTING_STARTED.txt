@@ -56,6 +56,41 @@ Outputs:
   out\ARM-Release\SphereTest1.out
   out\ARM-Release\SphereTest1.imagepackage
 
+GitHub builds and releases
+-------------------------
+Repository: https://github.com/MiguelCaldasMSOrg/SphereTest1
+The default branch is master. The Build and release workflow builds both ARM
+configurations on pushes and pull requests to master, and can be run manually.
+It installs the checksum-pinned Microsoft Azure Sphere SDK 26.06 on a hosted
+Windows runner. CI overrides only the machine-specific Ninja path; the local
+CMake presets and application code are unchanged. No board or Azure login is
+needed, and nothing is deployed to a device.
+
+Each successful build uploads a release-assets workflow artifact for 14 days:
+  SphereTest1-ARM-Debug.zip
+  SphereTest1-ARM-Release.zip
+  SHA256SUMS
+Each ZIP contains SphereTest1.imagepackage, SphereTest1.out, app_manifest.json
+and this guide. SHA256SUMS records the SHA-256 hash of each ZIP. Extract Debug
+and Release into separate folders because their internal filenames are identical.
+Debug retains debugging information; Release is optimized. Both image packages
+are development images for sideloading, not production-signed OTA images.
+
+Pushing a version tag beginning with v publishes a GitHub Release only after
+both builds and packaging succeed. Replace vX.Y.Z with a NEW version:
+  git tag -a vX.Y.Z -m "Release vX.Y.Z"
+  git push origin vX.Y.Z
+Tags containing a hyphen, such as v1.0.0-rc.1, publish as prereleases.
+Ordinary branch builds do not publish. Existing releases are not overwritten.
+The release assets remain available beyond workflow-artifact retention.
+
+To package existing local Debug and Release builds:
+  .\scripts\package-release.ps1
+Outputs are written to out\release-assets, which is excluded from source control.
+The workflow uses commit-pinned official checkout/upload/download actions with
+Node.js 24 runtimes and GitHub CLI for publishing, not deprecated release actions.
+Dependabot checks GitHub Actions pins weekly and proposes updates on master.
+
 Tools
 -----
 SDK:          Microsoft Azure Sphere SDK 26.06, installed on this PC.

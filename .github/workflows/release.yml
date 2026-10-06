@@ -1,0 +1,137 @@
+name: Build and release
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Debug and Release
+    runs-on: windows-2025
+    timeout-minutes: 30
+    outputs:
+      artifact-id: ${{ steps.assets.outputs.artifact-id }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Azure Sphere SDK 26.06
+        env:
+          SDK_URL: https://software-static.download.prss.microsoft.com/dbazure/888969d5-f34g-4e03-ac9d-1f9786c66751/Azure_Sphere_SDK.exe
+          SDK_SHA256: cefe39e0f90d5e0c1bd80454c0537eb2a44ac164d7465bc09f8c3d56bc5e00e3
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Join-Path $env:RUNNER_TEMP 'Azure_Sphere_SDK.exe'
+          Invoke-WebRequest -Uri $env:SDK_URL -OutFile $installer -MaximumRetryCount 3
+          if ((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash -ne $env:SDK_SHA256) {
+              throw 'The Azure Sphere SDK installer checksum does not match.'
+          }
+          $signature = Get-AuthenticodeSignature -LiteralPath $installer
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
+              throw 'The Azure Sphere SDK installer does not have a valid Microsoft signature.'
+          }
+          $log = Join-Path $env:RUNNER_TEMP 'Azure_Sphere_SDK_install.log'
+          $process = Start-Process -FilePath $installer -Wait -PassThru -ArgumentList @(
+              '/install', '/quiet', '/norestart', '/log', "`"$log`""
+          )
+          if ($process.ExitCode -notin @(0, 3010)) {
+              if (Test-Path -LiteralPath $log) {
+                  Get-Content -LiteralPath $log -Tail 100
+              }
+              throw "Azure Sphere SDK installation failed with exit code $($process.ExitCode)."
+          }
+          $sdk = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Azure Sphere SDK'
+          $toolchain = Join-Path $sdk 'CMakeFiles\AzureSphereToolchain.cmake'
+          if (-not (Test-Path -LiteralPath $toolchain -PathType Leaf)) {
+              throw "The Azure Sphere toolchain was not installed at $toolchain."
+          }
+          "AzureSphereDefaultSDKDir=$sdk" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Get-Content -LiteralPath (Join-Path $sdk 'VERSION')
+
+      - name: Build both configurations
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $ninja = (Get-Command ninja.exe -ErrorAction Stop).Source
+          foreach ($preset in @('ARM-Debug', 'ARM-Release')) {
+              cmake --preset $preset "-DCMAKE_MAKE_PROGRAM=$ninja"
+              if ($LASTEXITCODE -ne 0) {
+                  throw "CMake configuration failed for $preset."
+              }
+              cmake --build --preset $preset
+              if ($LASTEXITCODE -ne 0) {
+                  throw "The $preset build failed."
+              }
+          }
+
+      - name: Package release assets
+        run: .\scripts\package-release.ps1
+
+      - name: Upload release assets
+        id: assets
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-assets
+          path: |
+            out\release-assets\*.zip
+            out\release-assets\SHA256SUMS
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  publish:
+    name: Publish versioned release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Download the verified build assets
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact-id }}
+          path: release-assets
+          merge-multiple: true
+
+      - name: Verify checksums and publish
+        working-directory: release-assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum --check --strict SHA256SUMS
+          flags=()
+          if [[ "$RELEASE_TAG" == *-* ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "$RELEASE_TAG" \
+            SphereTest1-ARM-Debug.zip \
+            SphereTest1-ARM-Release.zip \
+            SHA256SUMS \
+            --repo "$GH_REPO" \
+            --verify-tag \
+            --generate-notes \
+            --title "SphereTest1 $RELEASE_TAG" \
+            --notes "Debug and optimized Release bundles for Azure Sphere API set 18. Both contain development images for sideloading, not production-signed OTA images." \
+            "${flags[@]}"
