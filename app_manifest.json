@@ -1,0 +1,10 @@
+{
+  "SchemaVersion": 1,
+  "Name": "SphereTest1",
+  "ComponentId": "d84026c3-ddc4-40e2-bf20-5ab36934e2f4",
+  "EntryPoint": "/bin/app",
+  "CmdArgs": [],
+  "Capabilities": {},
+  "ApplicationType": "Default",
+  "MallocVersion": 2
+}

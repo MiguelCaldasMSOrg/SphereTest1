@@ -1,0 +1,63 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Sphere: Build",
+      "type": "process",
+      "command": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\sphere.ps1", "-Action", "Build"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "group": {"kind": "build", "isDefault": true},
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Sphere: Build Release",
+      "type": "process",
+      "command": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\sphere.ps1", "-Action", "Build", "-Preset", "ARM-Release"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Sphere: Deploy and run",
+      "type": "process",
+      "command": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\sphere.ps1", "-Action", "Deploy"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Sphere: Prepare debug",
+      "type": "process",
+      "command": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\sphere.ps1", "-Action", "PrepareDebug"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Sphere: Device status",
+      "type": "process",
+      "command": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\sphere.ps1", "-Action", "Status"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "Sphere: Application log",
+      "type": "process",
+      "command": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\sphere.ps1", "-Action", "Log"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": [],
+      "presentation": {"reveal": "always", "panel": "dedicated"}
+    },
+    {
+      "label": "Sphere: Stop application",
+      "type": "process",
+      "command": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\sphere.ps1", "-Action", "Stop"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    }
+  ]
+}

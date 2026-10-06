@@ -1,0 +1,41 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "ARM-Debug",
+      "displayName": "Azure Sphere - ARM Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}\\out\\${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "CMAKE_TOOLCHAIN_FILE": "$env{AzureSphereDefaultSDKDir}\\CMakeFiles\\AzureSphereToolchain.cmake",
+        "CMAKE_MAKE_PROGRAM": "C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\Ninja\\ninja.exe",
+        "AZURE_SPHERE_TARGET_API_SET": "18"
+      }
+    },
+    {
+      "name": "ARM-Release",
+      "displayName": "Azure Sphere - ARM Release",
+      "inherits": "ARM-Debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "ARM-Debug",
+      "configurePreset": "ARM-Debug"
+    },
+    {
+      "name": "ARM-Release",
+      "configurePreset": "ARM-Release"
+    }
+  ]
+}

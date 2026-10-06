@@ -1,0 +1,17 @@
+{
+  "cmake.cmakePath": "C:\\Program Files\\CMake\\bin\\cmake.exe",
+  "cmake.useCMakePresets": "always",
+  "cmake.configureOnOpen": true,
+  "cmake.environment": {
+    "PATH": "C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\Ninja;${env:PATH}"
+  },
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "C_Cpp.default.intelliSenseMode": "linux-gcc-arm",
+  "C_Cpp.default.compileCommands": "${workspaceFolder}\\out\\ARM-Debug\\compile_commands.json",
+  "terminal.integrated.env.windows": {
+    "PATH": "C:\\Program Files\\CMake\\bin;C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\Ninja;${env:PATH}"
+  },
+  "files.associations": {
+    "*.h": "c"
+  }
+}

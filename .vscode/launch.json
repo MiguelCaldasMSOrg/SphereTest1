@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "SphereTest1 - build, deploy and debug",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}\\out\\ARM-Debug\\SphereTest1.out",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "${env:AzureSphereDefaultSDKDir}\\Sysroots\\18\\tools\\gcc\\arm-poky-linux-musleabi-gdb.exe",
+      "miDebuggerServerAddress": "192.168.35.2:2345",
+      "additionalSOLibSearchPath": "${env:AzureSphereDefaultSDKDir}\\Sysroots\\18\\lib;${env:AzureSphereDefaultSDKDir}\\Sysroots\\18\\usr\\lib",
+      "stopAtEntry": true,
+      "launchCompleteCommand": "exec-continue",
+      "externalConsole": false,
+      "preLaunchTask": "Sphere: Prepare debug"
+    }
+  ]
+}

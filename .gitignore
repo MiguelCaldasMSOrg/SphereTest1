@@ -1,0 +1,5 @@
+/out/
+/install/
+/.vs/
+/CMakeUserPresets.json
+*.imagepackage

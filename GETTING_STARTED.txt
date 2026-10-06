@@ -1,0 +1,263 @@
+SphereTest1 - Azure Sphere C development on this PC
+=================================================
+
+Open this folder in Visual Studio Code:
+  code C:\Projects\SphereTest1
+
+Use an ARM-Debug CMake configure preset if VS Code asks for one.
+Trust this folder only after reviewing its scripts and task configuration.
+
+What is included
+----------------
+main.c                  High-level Cortex-A7 C application.
+app_manifest.json       Application identity and permissions.
+CMakePresets.json       Debug/Release builds using SDK sysroot/API set 18.
+.vscode                 IntelliSense, build tasks and F5 debugging.
+scripts\sphere.ps1      Build and explicit USB device operations.
+examples                Opt-in GPIO, I2C, UART, storage and TCP examples.
+
+The application logs a local heartbeat every second. It requires no GPIO,
+Wi-Fi, internet, Azure login, cloud certificate or wall-clock synchronization.
+It uses a monotonic timer and handles SIGTERM without blocking on networking.
+No board-specific pin mapping is needed, so it is suitable for either MT3620.
+
+Daily workflow
+--------------
+Ctrl+Shift+B                 Build and package ARM-Debug. Does not deploy.
+F5                          Build, deploy and debug on the attached board.
+Tasks: Run Task              Select the named Sphere tasks below.
+  Sphere: Build Release     Produce an optimized ARM-Release image.
+  Sphere: Deploy and run    Build/deploy ARM-Debug without a debugger.
+  Sphere: Device status     Read OS, capabilities, network and installed apps.
+  Sphere: Application log   Read Log_Debug output while the app is running.
+  Sphere: Stop application  Stop only this project's application.
+
+F5 stops at main. Set a breakpoint or press F5 again to continue.
+For Log_Debug messages, run Sphere: Application log in another task terminal;
+the C/C++ Debug Console itself is for GDB, not the board's output stream.
+
+Connect ONE board at a time for the supplied F5 configuration. Its USB
+management address is 192.168.35.2, not the Wi-Fi address assigned by your router.
+Multiple attached boards cause the default device tasks to stop rather than
+choose arbitrarily. Command-line deployment can select a board using -DeviceId.
+
+PowerShell commands from this folder
+-----------------------------------
+  .\scripts\sphere.ps1 -Action Build
+  .\scripts\sphere.ps1 -Action Build -Preset ARM-Release
+  .\scripts\sphere.ps1 -Action Status
+  .\scripts\sphere.ps1 -Action Deploy
+  .\scripts\sphere.ps1 -Action Log
+  .\scripts\sphere.ps1 -Action Stop
+
+Outputs:
+  out\ARM-Debug\SphereTest1.out
+  out\ARM-Debug\SphereTest1.imagepackage
+  out\ARM-Release\SphereTest1.out
+  out\ARM-Release\SphereTest1.imagepackage
+
+Tools
+-----
+SDK:          Microsoft Azure Sphere SDK 26.06, installed on this PC.
+API/sysroot:  18, supported by the boards' OS 26.09.
+Compiler/GDB: The SDK's ARM Linux tools, NOT MSVC or the Windows host compiler.
+CMake:        C:\Program Files\CMake\bin\cmake.exe
+Ninja:        Reuses the installed Visual Studio 18 Enterprise copy.
+CLI:          az sphere, for local USB tasks.
+
+The supplied presets pin the existing Ninja installation path. If Visual Studio
+is removed or moved, update CMAKE_MAKE_PROGRAM in CMakePresets.json and the
+project-level PATH settings. AzureSphereDefaultSDKDir must point to the SDK;
+the SDK installer sets that environment variable.
+
+Deployment safety and offline behavior
+-------------------------------------
+Builds do not contact Azure and do not need an attached device.
+F5 and Deploy are explicit writes to the selected board. They replace only
+SphereTest1's component; other applications and the debugger are not deleted.
+Neither task claims devices, changes cloud groups, rewrites Wi-Fi, or enables
+development implicitly. Both boards already have development enabled.
+
+F5 intentionally uses the C/C++ GDB adapter and this project's guarded CLI
+tasks. The Sphere extension's default debug workflow can delete non-partner
+applications; this project avoids that behavior.
+
+Do not put Wi-Fi passwords, tokens or private keys in this project.
+The empty Capabilities object intentionally grants no application networking
+or peripheral access. When adding optional internet features, declare only the
+needed hosts in AllowedConnections and use bounded, asynchronous operations.
+Never make local startup or processing wait for network/authentication readiness.
+The OS may still contact Azure for maintenance whenever internet is available.
+
+Keep the ComponentId when updating this application. For an independent new
+application, generate a new GUID so it does not replace SphereTest1.
+
+Peripheral and asynchronous examples
+------------------------------------
+Read examples\examples.c for runnable usage and completion callbacks.
+Edit examples\examples_config.h to enable individual demonstrations.
+ALL EXAMPLE_*_ENABLED flags default to 0. Hardware IDs default to -1 and the
+network endpoint is a documentation-only address with an invalid port.
+The source files are compiled even when disabled; the default app still only
+runs its local heartbeat and starts no example threads, network requests or I/O.
+
+File                         Demonstrations
+gpio_example.c               Timed output changes; debounced input-change callback.
+i2c_example.c                Combined register read; explicit optional register write.
+uart_example.c               Receive callback; bounded asynchronous transmit callback.
+storage_example.c            Packaged read-only resource; mutable record read/write.
+network_example.c            Nonblocking TCP connect, partial send and response callback.
+async_job.c                  Offload synchronous work; deliver completion on event loop.
+example_timer.c              Reusable monotonic one-shot or periodic callback timer.
+
+To enable an example:
+1. Choose real pins/interface IDs or a server you control. Consult the exact
+   board schematic, not just the MT3620 chip numbering.
+2. Set its EXAMPLE_*_ENABLED flag and configuration values.
+3. Add ONLY its required permissions to Capabilities in app_manifest.json.
+4. Build, connect one board, then deploy explicitly using the existing task/F5.
+
+Raw manifest values are used here to keep the examples board-agnostic. These are
+mapping examples, not instructions to use particular board pins:
+
+  Feature       C/API ID example             Manifest capability example
+  GPIO          GPIO number, e.g. 8          "Gpio": [8, 12]
+  I2C ISU0      interface ID 0                "I2cMaster": ["ISU0"]
+  UART ISU1     interface ID 5                "Uart": ["ISU1"]
+  Storage       no peripheral ID             "MutableStorage": {"SizeKB": 8}
+  TCP client    real IPv4 + port             "AllowedConnections": ["192.168.0.10"]
+
+Do not copy all these capabilities blindly. Use the IDs matching YOUR wiring.
+Numbers in a board's header labels need not equal the chip GPIO/API ID.
+I2C and UART cannot share the same ISU block. UART API IDs differ from I2C IDs:
+for example ISU0 is I2C ID0 but UART ID4. The SDK HardwareDefinitions\mt3620.json
+lists MainCoreHeaderValue (for C) and AppManifestValue (for the manifest).
+Raw IDs need no generated hardware header; do not mix raw and $symbolic values
+within one manifest capability. Match electrical voltage, ground and pull-ups
+to the board/peripheral specifications. Do not connect RS-232 voltage levels
+directly to the board's UART pins.
+
+GPIO: output and input
+----------------------
+Set input/output IDs and EXAMPLE_GPIO_INACTIVE_HIGH to the safe OFF level for
+your circuit. The demo toggles its output once per second and restores the OFF
+level at orderly shutdown. Use a harmless LED/test circuit, not an actuator.
+Input is sampled every 20 ms and must agree for three consecutive samples before
+the change callback fires. Missed timer expirations do not count as extra samples.
+These are timer-polled changes, NOT hardware interrupts: very short pulses can
+be missed. GPIO_GetValue/SetValue themselves are short synchronous calls.
+
+I2C: register transaction with completion callback
+-------------------------------------------------
+The SDK I2C transfer APIs are blocking. Simply putting them inside a timer
+callback would still block the main loop; this example offloads the transfer to
+AsyncJob. Only the worker opens/uses/closes its bus handle. Each transaction has
+a 100 ms driver timeout and a 16-byte limit. The main loop receives the result later.
+
+Configure the bus ID, 7-bit address and register from the peripheral datasheet,
+then set EXAMPLE_I2C_REGISTER_CONFIRMED to 1. A read can itself have side effects on
+some peripherals; verify register semantics first. The demo reads one register
+byte every five scheduler ticks; the reusable API supports up to 16 data bytes.
+The write-then-read API returns the TOTAL written-plus-read byte count. Short
+transfers are errors, not silently accepted data.
+
+EXAMPLE_I2C_WRITE_ENABLED defaults to 0 independently of the read example.
+If explicitly enabled, the demo first writes EXAMPLE_I2C_WRITE_VALUE once, then
+performs reads. No automatic retries of partial register writes are performed.
+Do not use this generic 8-bit register protocol on a sensor needing a different
+register width, command sequence or conversion delay without adapting it.
+
+UART: readiness callbacks and partial writes
+-------------------------------------------
+Default 115200, 8N1, no flow control. UartExample_Start registers nonblocking input
+readiness; UartExample_Send copies up to 256 bytes and returns without waiting
+for transmission. The demo sends a test line every five seconds and reports
+incoming byte chunks, which are NOT necessarily complete lines/messages.
+
+Only one send is pending at a time; another returns EBUSY. Partial writes and
+EAGAIN are handled by output readiness. A one-second send timeout prevents a
+stalled peer/driver from blocking the rest of the app. Completion means bytes
+were accepted by the UART driver, not that a remote device acknowledged them.
+Do not use tcdrain on the main event loop if physical transmission completion is
+needed; implement a peripheral acknowledgement protocol instead.
+
+Storage: read-only resource and persistent record
+------------------------------------------------
+The demo first reads the packaged examples/resources/message.txt, then reads
+its mutable record. The resource path uses '/' because it is INSIDE the Sphere
+image filesystem, not a Windows path. Packaged-file reads need no MutableStorage
+capability; mutable access needs the SizeKB permission above.
+
+File operations run in AsyncJob, so reads/writes/fsync do not hold up the main
+loop. Buffers are bounded to 128 payload bytes. The mutable demo uses a 134-byte
+record: four-byte SPHR magic, version byte 1, one-byte payload length, then
+128 zero-padded payload bytes. It is not a general filesystem.
+This allows replacing a payload with a shorter one without unsupported truncate
+operations. Invalid/truncated records produce an error, not a default value.
+
+EXAMPLE_STORAGE_WRITE_ENABLED defaults to 0. Enabling it explicitly writes a
+single demonstration record after a successful read, once per application run,
+not every heartbeat. It replaces this application's demo data. Avoid frequent
+flash writes: batch real changes and consider wear and power-failure handling.
+fsync requests persistence, but this single-record example is NOT power-failure
+atomic and has no journal/checksum. Use a versioned two-slot/journal design for
+valuable production state. It does not delete the application's mutable file.
+
+Networking: optional nonblocking TCP request
+-------------------------------------------
+Configure a numeric IPv4 address and port for a newline echo server you control.
+Add that IP to AllowedConnections (WITHOUT the port). No server-port permission,
+DeviceAuthentication capability, Azure IoT service or Sphere DAA certificate is
+needed for this client example.
+
+The demo sends "SphereTest1 TCP ping\n" and expects a newline-terminated response
+or orderly EOF. It attempts once every 30 seconds, uses a three-second whole-request
+timeout, and reports failure without stopping local work. It handles partial
+sends/reads, response overflow and connect completion using SO_ERROR. Only one
+request is in flight, with a 256-byte request/512-byte response limit.
+
+This is raw, PLAINTEXT TCP for a trusted lab network: do not transmit credentials,
+private data or production control traffic. It is not HTTP or TLS. Numeric IPv4
+avoids blocking DNS. For internet services, use a TLS-aware asynchronous library
+and certificate validation, and offload DNS if that library's resolver blocks.
+No networking-readiness, Azure-authentication or wall-clock-sync check gates the
+heartbeat. An unavailable server/internet connection only fails this operation.
+
+Callback and lifetime rules
+---------------------------
+All examples' completion/change callbacks run on the SAME EventLoop thread.
+Keep callbacks short; do not sleep, synchronously wait for the network, or run a
+nested EventLoop_Run. Synchronous setup errors return NULL/-1 with errno and do
+not call the completion callback. AsyncJob work functions return 0 or an errno
+value; the result is delivered back on the event-loop thread.
+
+AsyncJob permits one outstanding request, not an unbounded queue. The runner
+shares one worker between I2C and storage. The worker uses a 64 KiB stack, and a
+20 ms timer polls for completion with a nonblocking join; it is not an I/O
+interrupt from the peripheral. Request/context memory must remain
+valid and untouched until completion; the demo uses static request structures.
+Do not concurrently use the same I2C bus or mutable file from elsewhere.
+Do not call EventLoop APIs from a worker thread.
+
+UART/network send functions copy their bounded outgoing buffers. Receive buffers
+are valid only during the callback. GPIO/UART callbacks must not destroy their
+own object; arrange closure after returning. The TCP callback may close its own
+completed operation, as its header documents; the runner closes it on a later tick.
+
+Orderly shutdown stops new requests, closes event registrations before their file
+descriptors, and drains any worker completion for at most one second. A synchronous
+storage syscall cannot be forcibly cancelled safely. If the worker is still busy,
+the app logs an error and exits without freeing memory the worker may still use;
+process teardown releases it. This is bounded app shutdown, not guaranteed
+completion of every outstanding I/O operation. Do not copy it as a hard-real-time
+or transactional-storage guarantee.
+
+Documentation
+-------------
+https://learn.microsoft.com/azure-sphere/app-development/build-hl-app
+https://learn.microsoft.com/azure-sphere/app-development/debug-hl-app
+https://learn.microsoft.com/azure-sphere/app-development/app-manifest
+https://learn.microsoft.com/azure-sphere/app-development/threads-concurrency
+https://learn.microsoft.com/azure-sphere/app-development/i2c
+https://learn.microsoft.com/azure-sphere/app-development/uart
+https://learn.microsoft.com/azure-sphere/app-development/storage

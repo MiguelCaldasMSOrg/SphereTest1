@@ -1,0 +1,2 @@
+Read-only packaged configuration example.
+This file ships in the app image; mutable demo records use separate storage.
